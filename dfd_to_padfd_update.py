@@ -3,6 +3,21 @@ import xml.etree.ElementTree as ET
 import csv
 
 
+def remove_drawio_identifier(str):
+    if "-" in str:
+        return str.split("-")[1]
+    else:
+        return str
+
+def pretty(d, indent=0):
+   for key, value in d.items():
+      print('\t' * indent + str(key))
+      if isinstance(value, dict):
+         pretty(value, indent+1)
+      else:
+         print('\t' * (indent+1) + str(value))
+
+
 # function for producing dfd in csv format
 def initialize(xmlfile_DFD, csvfile_DFD):
     tree = ET.parse(xmlfile_DFD)
@@ -14,40 +29,48 @@ def initialize(xmlfile_DFD, csvfile_DFD):
             for subsubsubroot in subsubroot:
                 for child in subsubsubroot:
                     news = {}
-                    if int(child.attrib['id']) >= 2:
-                        news['id'] = child.attrib['id']
-                        news['value'] = child.attrib['value']
-                        if child.attrib['style'].startswith("rounded=0"):
-                            news['style'] = 'rounded=0'
-                            news['source'] = 'null'
-                            news['target'] = 'null'
-                            news['type'] = 'external_entity'
-                        elif "doubleEllipse" in child.attrib['style']:
-                            news['style'] = 'ellipse;shape=doubleEllipse'
-                            news['source'] = 'null'
-                            news['target'] = 'null'
-                            news['type'] = 'composite_process'
-                        elif child.attrib['style'].startswith("ellipse"):
-                            news['style'] = 'ellipse'
-                            news['source'] = 'null'
-                            news['target'] = 'null'
-                            news['type'] = 'process'
-                        elif child.attrib['style'].startswith("shape"):
-                            news['style'] = 'shape=partialRectangle'
-                            news['source'] = 'null'
-                            news['target'] = 'null'
-                            news['type'] = 'data_base'
-                        elif child.attrib['style'].startswith("endArrow=classic"):
-                            news['source'] = child.attrib['source']
-                            news['target'] = child.attrib['target']
-                            news['style'] = 'endArrow=classic'
-                            news['type'] = 'endArrow=classic'
-                        elif child.attrib['style'].startswith("endArrow=cross"):
-                            news['source'] = child.attrib['source']
-                            news['target'] = child.attrib['target']
-                            news['style'] = 'endArrow=cross'
-                            news['type'] = 'endArrow=cross'
-                        newsitems.append(news)
+
+                    try:
+                        child.attrib['value']
+                    except KeyError:
+                        continue
+
+                    news['id'] = remove_drawio_identifier(child.attrib['id'])
+                    news['value'] = child.attrib['value']
+                    if child.attrib['style'].startswith("rounded=0"):
+                        news['style'] = 'rounded=0'
+                        news['source'] = 'null'
+                        news['target'] = 'null'
+                        news['type'] = 'external_entity'
+                    elif "doubleEllipse" in child.attrib['style']:
+                        news['style'] = 'ellipse;shape=doubleEllipse'
+                        news['source'] = 'null'
+                        news['target'] = 'null'
+                        news['type'] = 'composite_process'
+                    elif child.attrib['style'].startswith("ellipse"):
+                        news['style'] = 'ellipse'
+                        news['source'] = 'null'
+                        news['target'] = 'null'
+                        news['type'] = 'process'
+                    elif child.attrib['style'].startswith("shape"):
+                        news['style'] = 'shape=partialRectangle'
+                        news['source'] = 'null'
+                        news['target'] = 'null'
+                        news['type'] = 'data_base'
+                    elif child.attrib['style'].startswith("endArrow=classic"):
+                        news['source'] = remove_drawio_identifier(child.attrib['source'])
+                        news['target'] = remove_drawio_identifier(child.attrib['target'])
+                        news['style'] = 'endArrow=classic'
+                        news['type'] = 'endArrow=classic'
+                    elif child.attrib['style'].startswith("endArrow=cross"):
+                        news['source'] = remove_drawio_identifier(child.attrib['source'])
+                        news['target'] = remove_drawio_identifier(child.attrib['target'])
+                        news['style'] = 'endArrow=cross'
+                        news['type'] = 'endArrow=cross'
+                    pretty(news)
+                    print("---------")
+                    newsitems.append(news)
+
 
     fields = ['id', 'value', 'style', 'source', 'target', 'type']
     with open(csvfile_DFD, 'w') as csvfile:
@@ -78,49 +101,49 @@ def generate_dfd_graph(original):
 def get_data_flow_types(dfd_graph):
     for index, data_flow in dfd_graph.items():
         if data_flow['style'] == 'endArrow=classic':
-            if dfd_graph[data_flow['source']]['style'] == 'rounded=0' and dfd_graph[data_flow['target']][
+            if dfd_graph[remove_drawio_identifier(data_flow['source'])]['style'] == 'rounded=0' and dfd_graph[remove_drawio_identifier(data_flow['target'])][
                 'style'] == 'ellipse':
                 dfd_graph[index]['type'] = 'in'
-            if dfd_graph[data_flow['source']]['style'] == 'rounded=0' and dfd_graph[data_flow['target']][
+            if dfd_graph[remove_drawio_identifier(data_flow['source'])]['style'] == 'rounded=0' and dfd_graph[remove_drawio_identifier(data_flow['target'])][
                 'style'] == 'ellipse;shape=doubleEllipse':
                 dfd_graph[index]['type'] = 'inc'
-            elif dfd_graph[data_flow['source']]['style'] == 'ellipse' and dfd_graph[data_flow['target']][
+            elif dfd_graph[remove_drawio_identifier(data_flow['source'])]['style'] == 'ellipse' and dfd_graph[remove_drawio_identifier(data_flow['target'])][
                 'style'] == 'rounded=0':
                 dfd_graph[index]['type'] = 'out'
-            elif dfd_graph[data_flow['source']]['style'] == 'ellipse;shape=doubleEllipse' and \
-                    dfd_graph[data_flow['target']]['style'] == 'rounded=0':
+            elif dfd_graph[remove_drawio_identifier(data_flow['source'])]['style'] == 'ellipse;shape=doubleEllipse' and \
+                    dfd_graph[remove_drawio_identifier(data_flow['target'])]['style'] == 'rounded=0':
                 dfd_graph[index]['type'] = 'cout'
-            elif (dfd_graph[data_flow['source']]['style'] == 'ellipse' and dfd_graph[data_flow['target']][
+            elif (dfd_graph[remove_drawio_identifier(data_flow['source'])]['style'] == 'ellipse' and dfd_graph[remove_drawio_identifier(data_flow['target'])][
                 'style'] == 'ellipse'):
                 dfd_graph[index]['type'] = 'comp'
-            elif (dfd_graph[data_flow['source']]['style'] == 'ellipse;shape=doubleEllipse' and
-                  dfd_graph[data_flow['target']]['style'] == 'ellipse;shape=doubleEllipse'):
+            elif (dfd_graph[remove_drawio_identifier(data_flow['source'])]['style'] == 'ellipse;shape=doubleEllipse' and
+                  dfd_graph[remove_drawio_identifier(data_flow['target'])]['style'] == 'ellipse;shape=doubleEllipse'):
                 dfd_graph[index]['type'] = 'ccompc'
-            elif (dfd_graph[data_flow['source']]['style'] == 'ellipse;shape=doubleEllipse' and
-                  dfd_graph[data_flow['target']]['style'] == 'ellipse'):
+            elif (dfd_graph[remove_drawio_identifier(data_flow['source'])]['style'] == 'ellipse;shape=doubleEllipse' and
+                  dfd_graph[remove_drawio_identifier(data_flow['target'])]['style'] == 'ellipse'):
                 dfd_graph[index]['type'] = 'ccomp'
-            elif (dfd_graph[data_flow['source']]['style'] == 'ellipse' and
-                  dfd_graph[data_flow['target']]['style'] == 'ellipse;shape=doubleEllipse'):
+            elif (dfd_graph[remove_drawio_identifier(data_flow['source'])]['style'] == 'ellipse' and
+                  dfd_graph[remove_drawio_identifier(data_flow['target'])]['style'] == 'ellipse;shape=doubleEllipse'):
                 dfd_graph[index]['type'] = 'compc'
-            elif dfd_graph[data_flow['source']]['style'] == 'ellipse' and dfd_graph[data_flow['target']][
+            elif dfd_graph[remove_drawio_identifier(data_flow['source'])]['style'] == 'ellipse' and dfd_graph[remove_drawio_identifier(data_flow['target'])][
                 'style'] == 'shape=partialRectangle':
                 dfd_graph[index]['type'] = 'store'
-            elif dfd_graph[data_flow['source']]['style'] == 'ellipse;shape=doubleEllipse' and \
-                    dfd_graph[data_flow['target']][
+            elif dfd_graph[remove_drawio_identifier(data_flow['source'])]['style'] == 'ellipse;shape=doubleEllipse' and \
+                    dfd_graph[remove_drawio_identifier(data_flow['target'])][
                         'style'] == 'shape=partialRectangle':
                 dfd_graph[index]['type'] = 'cstore'
-            elif dfd_graph[data_flow['source']]['style'] == 'shape=partialRectangle' and dfd_graph[data_flow['target']][
+            elif dfd_graph[remove_drawio_identifier(data_flow['source'])]['style'] == 'shape=partialRectangle' and dfd_graph[remove_drawio_identifier(data_flow['target'])][
                 'style'] == 'ellipse':
                 dfd_graph[index]['type'] = 'read'
-            elif dfd_graph[data_flow['source']]['style'] == 'shape=partialRectangle' and dfd_graph[data_flow['target']][
+            elif dfd_graph[remove_drawio_identifier(data_flow['source'])]['style'] == 'shape=partialRectangle' and dfd_graph[remove_drawio_identifier(data_flow['target'])][
                 'style'] == 'ellipse;shape=doubleEllipse':
                 dfd_graph[index]['type'] = 'readc'
             if data_flow['style'] == 'endArrow=cross':
-                if dfd_graph[data_flow['source']]['style'] == 'ellipse' and dfd_graph[data_flow['target']][
+                if dfd_graph[remove_drawio_identifier(data_flow['source'])]['style'] == 'ellipse' and dfd_graph[remove_drawio_identifier(data_flow['target'])][
                     'style'] == 'shape=partialRectangle':
                     dfd_graph[index]['type'] = 'delete'
-                elif dfd_graph[data_flow['source']]['style'] == 'ellipse;shape=doubleEllipse' and \
-                        dfd_graph[data_flow['target']]['style'] == 'shape=partialRectangle':
+                elif dfd_graph[remove_drawio_identifier(data_flow['source'])]['style'] == 'ellipse;shape=doubleEllipse' and \
+                        dfd_graph[remove_drawio_identifier(data_flow['target'])]['style'] == 'shape=partialRectangle':
                     dfd_graph[index]['type'] = 'cdelete'
     return dfd_graph
 
@@ -2042,6 +2065,9 @@ def generate_pa_dfd_xml(csvfile_PA_DFD, xmlfile_PA_DFD):
     edge = 'edge'
     rowNum = 0
 
+    def with_prefix(i):
+        return "asdf-" + str(i)
+
     for row in csvData:
         if rowNum == 0:
             tags = row
@@ -2062,7 +2088,7 @@ def generate_pa_dfd_xml(csvfile_PA_DFD, xmlfile_PA_DFD):
             xmlData.write('  ' + '<mxCell' + ' ')
             for i in range(len(tags)):
                 if i == 0:
-                    xmlData.write('{} "{}" '.format(att1, str(row[i])))
+                    xmlData.write('{} "{}" '.format(att1, with_prefix(row[i])))
                 if i == 1:
                     xmlData.write('{} "{}" '.format(att2, str(row[i])))
                 if i == 2:
@@ -2074,9 +2100,9 @@ def generate_pa_dfd_xml(csvfile_PA_DFD, xmlfile_PA_DFD):
                     if row[i] in ['ellipse;shape=doubleEllipse', 'ellipse', 'rounded=0', 'shape=partialRectangle']:
                         xmlData.write('{}="1" {}="1" {}'.format(vertex, parent, end))
                 if i == 3 and row[i] != 'null':
-                    xmlData.write('{} "{}" '.format(att4, str(row[i])))
+                    xmlData.write('{} "{}" '.format(att4, with_prefix(row[i])))
                 if i == 4 and row[i] != 'null':
-                    xmlData.write('{} "{}" '.format(att5, str(row[i])))
+                    xmlData.write('{} "{}" '.format(att5, with_prefix(row[i])))
                     xmlData.write('{}="1" {}="1" >'.format(edge, parent, ))
             if style in ['ellipse;shape=doubleEllipse', 'ellipse', 'rounded=0', 'shape=partialRectangle']:
                 xmlData.write("\n" + ' <mxGeometry x="560" y="480" width="100" height="100" as="geometry"/>' + "\n")
