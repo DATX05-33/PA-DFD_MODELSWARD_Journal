@@ -5,7 +5,8 @@ import csv
 
 def remove_drawio_identifier(str):
     if "-" in str:
-        return str.split("-")[1]
+        split = str.split("-")
+        return split[len(split) - 1]
     else:
         return str
 
